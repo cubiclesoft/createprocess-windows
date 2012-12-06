@@ -1,0 +1,2 @@
+# Ignore debugging and intermediate files.
+*.obj
