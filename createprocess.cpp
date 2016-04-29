@@ -1,6 +1,6 @@
 // A simple program whose sole job is to run custom CreateProcess() commands.
 // Useful for executing programs from batch files that don't play nice (e.g. Apache).
-// (C) 2012 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 // Implemented as a single file rather than relying on my core library because I
 // want full Unicode support and other people should be able to build this.
@@ -75,7 +75,7 @@ void DumpSyntax(TCHAR *currfile)
 
 	_tprintf(_T("\t/f=CreateFlag\n"));
 	_tprintf(_T("\t\tSets a creation flag for the new process.\n"));
-	_tprintf(_T("\t\tMultiple -f options can be specified.\n"));
+	_tprintf(_T("\t\tMultiple /f options can be specified.\n"));
 	_tprintf(_T("\t\tEach 'CreateFlag' can be one of:\n"));
 	_tprintf(_T("\t\tCREATE_DEFAULT_ERROR_MODE\n"));
 	_tprintf(_T("\t\tCREATE_NEW_CONSOLE\n"));
@@ -119,7 +119,7 @@ void DumpSyntax(TCHAR *currfile)
 
 	_tprintf(_T("\t/f=FillAttribute\n"));
 	_tprintf(_T("\t\tSets the STARTUPINFO.dwFillAttribute member to buffer height, in characters.\n"));
-	_tprintf(_T("\t\tMultiple -si_fill options can be specified.\n"));
+	_tprintf(_T("\t\tMultiple /f options can be specified.\n"));
 	_tprintf(_T("\t\tEach 'FillAttribute' can be one of:\n"));
 	_tprintf(_T("\t\tFOREGROUND_RED\n"));
 	_tprintf(_T("\t\tFOREGROUND_GREEN\n"));
@@ -132,7 +132,7 @@ void DumpSyntax(TCHAR *currfile)
 
 	_tprintf(_T("\t/f=StartupFlag\n"));
 	_tprintf(_T("\t\tSets the STARTUPINFO.dwFlags flag for the new process.\n"));
-	_tprintf(_T("\t\tMultiple -si_f options can be specified.\n"));
+	_tprintf(_T("\t\tMultiple /f options can be specified.\n"));
 	_tprintf(_T("\t\tEach 'StartupFlag' can be one of:\n"));
 	_tprintf(_T("\t\tSTARTF_FORCEONFEEDBACK\n"));
 	_tprintf(_T("\t\tSTARTF_FORCEOFFFEEDBACK\n"));
