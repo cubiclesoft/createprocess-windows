@@ -1,9 +1,10 @@
 // A simple program whose sole job is to run custom CreateProcess() commands.
-// Useful for executing programs from batch files that don't play nice (e.g. Apache).
+// Useful for executing programs from batch files that don't play nice (e.g. Apache)
+// or working around limitations in scripting languages.
+//
 // (C) 2016 CubicleSoft.  All Rights Reserved.
 
-// Implemented as a single file rather than relying on my core library because I
-// want full Unicode support and other people should be able to build this.
+// Implemented as a single file compilation unit.
 
 #define UNICODE
 #define _UNICODE
@@ -15,6 +16,8 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <tchar.h>
 
@@ -40,7 +43,7 @@
 
 void DumpSyntax(TCHAR *currfile)
 {
-	_tprintf(_T("(C) 2012 CubicleSoft.  All Rights Reserved.\n\n"));
+	_tprintf(_T("(C) 2016 CubicleSoft.  All Rights Reserved.\n\n"));
 
 	_tprintf(_T("Syntax:  %s [options] EXEToRun [arguments]\n\n"), currfile);
 
@@ -163,21 +166,95 @@ void DumpSyntax(TCHAR *currfile)
 	_tprintf(_T("\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n"));
 	_tprintf(_T("\t\tSpecifies the wParam member of a WM_SETHOKEY message to the new process.\n\n"));
 
-	_tprintf(_T("\t/stdin=FileOrEmpty\n"));
+	_tprintf(_T("\t/socketip=IPAddress\n"));
+	_tprintf(_T("\t\tSpecifies the IP address to connect to over TCP/IP.\n\n"));
+
+	_tprintf(_T("\t/socketport=PortNumber\n"));
+	_tprintf(_T("\t\tSpecifies the port number to connect to over TCP/IP.\n\n"));
+
+	_tprintf(_T("\t/stdin=FileOrEmptyOrsocket\n"));
 	_tprintf(_T("\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n"));
 	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
+	_tprintf(_T("\t\tWhen this option is 'socket', the /socket IP and port are used.\n"));
 	_tprintf(_T("\t\tWhen this option is not specified, the current stdin is used.\n\n"));
 
-	_tprintf(_T("\t/stdout=FileOrEmpty\n"));
+	_tprintf(_T("\t/stdout=FileOrEmptyOrsocket\n"));
 	_tprintf(_T("\t\tSets the STARTUPINFO.hStdOutput handle for the new process.\n"));
 	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
+	_tprintf(_T("\t\tWhen this option is 'socket', the /socket IP and port are used.\n"));
 	_tprintf(_T("\t\tWhen this option is not specified, the current stdout is used.\n\n"));
 
-	_tprintf(_T("\t/stderr=FileOrEmptyOrstdout\n"));
+	_tprintf(_T("\t/stderr=FileOrEmptyOrstdoutOrsocket\n"));
 	_tprintf(_T("\t\tSets the STARTUPINFO.hStdError handle for the new process.\n"));
 	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
 	_tprintf(_T("\t\tWhen this option is 'stdout', the value of stdout is used.\n"));
+	_tprintf(_T("\t\tWhen this option is 'socket', the /socket IP and port are used.\n"));
 	_tprintf(_T("\t\tWhen this option is not specified, the current stderr is used.\n\n"));
+}
+
+bool GxNetworkStarted = false;
+SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd)
+{
+	if (socketip == NULL || socketport == 0)  return INVALID_SOCKET;
+
+	// Initialize Winsock.
+	if (!GxNetworkStarted)
+	{
+		WSADATA WSAData;
+		if (::WSAStartup(MAKEWORD(2, 2), &WSAData))  return INVALID_SOCKET;
+		if (LOBYTE(WSAData.wVersion) != 2 || HIBYTE(WSAData.wVersion) != 2)  return INVALID_SOCKET;
+
+		GxNetworkStarted = true;
+	}
+
+	// Determine IPv4 or IPv6.
+	SOCKET s;
+	if (_tcschr(socketip, _T(':')) != NULL)
+	{
+		struct sockaddr_in6 si = {0};
+
+		si.sin6_family = AF_INET6;
+		si.sin6_port = ::htons(socketport);
+		if (::InetPton(AF_INET6, socketip, &si.sin6_addr) != 1)  return INVALID_SOCKET;
+
+		s = ::WSASocket(AF_INET6, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
+		if (s == INVALID_SOCKET)  return INVALID_SOCKET;
+
+		if (::connect(s, (sockaddr *)&si, sizeof(si)) != 0)
+		{
+			::closesocket(s);
+
+			return INVALID_SOCKET;
+		}
+	}
+	else
+	{
+		struct sockaddr_in si = {0};
+
+		si.sin_family = AF_INET;
+		si.sin_port = ::htons(socketport);
+		if (::InetPton(AF_INET, socketip, &si.sin_addr) != 1)  return INVALID_SOCKET;
+
+		s = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
+		if (s == INVALID_SOCKET)  return INVALID_SOCKET;
+
+		if (::connect(s, (sockaddr *)&si, sizeof(si)) != 0)
+		{
+			::closesocket(s);
+
+			return INVALID_SOCKET;
+		}
+	}
+
+	// Send one byte of data to the target so that it knows which file descriptor this socket is associated with.
+	if (::send(s, &fd, 1, 0) != 1)
+	{
+		::closesocket(s);
+
+		return INVALID_SOCKET;
+	}
+
+	return s;
 }
 
 int _tmain(int argc, TCHAR **argv)
@@ -200,6 +277,11 @@ int _tmain(int argc, TCHAR **argv)
 	TCHAR *stdinstr = _T(":stdin");
 	TCHAR *stdoutstr = _T(":stdout");
 	TCHAR *stderrstr = _T(":stderr");
+	TCHAR *socketip = NULL;
+	unsigned short socketport = 0;
+	SOCKET stdinsocket = INVALID_SOCKET;
+	SOCKET stdoutsocket = INVALID_SOCKET;
+	SOCKET stderrsocket = INVALID_SOCKET;
 	PROCESS_INFORMATION procinfo = {0};
 	DWORD exitcode = 0;
 
@@ -320,12 +402,24 @@ int _tmain(int argc, TCHAR **argv)
 			startinfo.dwFlags |= STARTF_USEHOTKEY;
 			startinfo.dwFlags ^= ~STARTF_USESTDHANDLES;
 		}
+		else if (!_tcsncicmp(argv[x], _T("/socketip="), 10))  socketip = argv[x] + 10;
+		else if (!_tcsncicmp(argv[x], _T("/socketport="), 12))  socketport = (unsigned short)_tstoi(argv[x] + 12);
 		else if (!_tcsncicmp(argv[x], _T("/stdin="), 7))
 		{
 			if (argv[x][7] == _T('\0'))
 			{
 				startinfo.hStdInput = NULL;
 				stdinstr = _T(":null");
+			}
+			else if (!_tcsicmp(argv[x] + 7, _T("socket")))
+			{
+				SOCKET stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00');
+
+				if (stdinsocket != INVALID_SOCKET)
+				{
+					startinfo.hStdInput = (HANDLE)stdinsocket;
+					stdinstr = _T(":socket");
+				}
 			}
 			else
 			{
@@ -342,6 +436,16 @@ int _tmain(int argc, TCHAR **argv)
 			{
 				startinfo.hStdOutput = NULL;
 				stdoutstr = _T(":null");
+			}
+			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
+			{
+				SOCKET stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01');
+
+				if (stdoutsocket != INVALID_SOCKET)
+				{
+					startinfo.hStdOutput = (HANDLE)stdoutsocket;
+					stdoutstr = _T(":socket");
+				}
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("stderr")))
 			{
@@ -368,6 +472,16 @@ int _tmain(int argc, TCHAR **argv)
 			{
 				startinfo.hStdError = NULL;
 				stderrstr = _T(":null");
+			}
+			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
+			{
+				SOCKET stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02');
+
+				if (stderrsocket != INVALID_SOCKET)
+				{
+					startinfo.hStdError = (HANDLE)stderrsocket;
+					stderrstr = _T(":socket");
+				}
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("stdout")))
 			{
@@ -632,6 +746,7 @@ int _tmain(int argc, TCHAR **argv)
 				if (waitamount == INFINITE)  _tprintf(_T("Waiting for process to complete...\n"));
 				else  _tprintf(_T("Waiting for process to complete (%ims)...\n"), waitamount);
 			}
+
 			if (::WaitForSingleObject(procinfo.hProcess, waitamount) == WAIT_OBJECT_0)
 			{
 				if (!::GetExitCodeProcess(procinfo.hProcess, &exitcode))  exitcode = 0;
@@ -648,6 +763,15 @@ int _tmain(int argc, TCHAR **argv)
 	}
 
 	delete[] commandline;
+
+	if (GxNetworkStarted)
+	{
+		if (stdinsocket != INVALID_SOCKET)  ::closesocket(stdinsocket);
+		if (stdoutsocket != INVALID_SOCKET)  ::closesocket(stdoutsocket);
+		if (stderrsocket != INVALID_SOCKET)  ::closesocket(stderrsocket);
+
+		::WSACleanup();
+	}
 
 	// Let the OS clean up after this program.  It is lazy, but whatever.
 	if (verbose)  _tprintf(_T("Return code = %i\n"), (int)exitcode);

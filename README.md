@@ -14,9 +14,10 @@ Features
 
 * Command-line action!
 * Verbose mode tells you exactly how CreateProcess() will be called.  No more guessing!
-* Pre-built binaries against Visual Studio (statically linked runtime, minimal file size of ~75K).
+* Can redirect stdin, stdout, and stderr to TCP/IP sockets.  Avoid blocking on anonymous pipes or storing output in files!
+* Pre-built binaries against Visual Studio (statically linked runtime, minimal file size of ~100K).
 * Unicode support.
-* Offers almost everything CreateProcess() offers plus a couple extra niceties (e.g. output the process ID to a file).
+* Offers almost everything CreateProcess() offers plus a couple of nice extras (e.g. output the process ID to a file).
 * Has a liberal open source license.  MIT or LGPL, your choice.
 * Sits on GitHub for all of that pull request and issue tracker goodness to easily submit changes and ideas respectively.
 
@@ -146,20 +147,29 @@ Options:
                 Sets the STARTUPINFO.hStdInput handle for the new process.
                 Specifies the wParam member of a WM_SETHOKEY message to the new process.
 
-        /stdin=FileOrEmpty
+        /socketip=IPAddress
+                Specifies the IP address to connect to over TCP/IP.
+
+        /socketport=PortNumber
+                Specifies the port number to connect to over TCP/IP.
+
+        /stdin=FileOrEmptyOrsocket
                 Sets the STARTUPINFO.hStdInput handle for the new process.
                 When this option is empty, INVALID_HANDLE_VALUE is used.
+                When this option is 'socket', the /socket IP and port are used.
                 When this option is not specified, the current stdin is used.
 
-        /stdout=FileOrEmpty
+        /stdout=FileOrEmptyOrsocket
                 Sets the STARTUPINFO.hStdOutput handle for the new process.
                 When this option is empty, INVALID_HANDLE_VALUE is used.
+                When this option is 'socket', the /socket IP and port are used.
                 When this option is not specified, the current stdout is used.
 
-        /stderr=FileOrEmptyOrstdout
+        /stderr=FileOrEmptyOrstdoutOrsocket
                 Sets the STARTUPINFO.hStdError handle for the new process.
                 When this option is empty, INVALID_HANDLE_VALUE is used.
                 When this option is 'stdout', the value of stdout is used.
+                When this option is 'socket', the /socket IP and port are used.
                 When this option is not specified, the current stderr is used.
 ```
 
