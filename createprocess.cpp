@@ -172,6 +172,14 @@ void DumpSyntax(TCHAR *currfile)
 	_tprintf(_T("\t/socketport=PortNumber\n"));
 	_tprintf(_T("\t\tSpecifies the port number to connect to over TCP/IP.\n\n"));
 
+	_tprintf(_T("\t/sockettoken=Token\n"));
+	_tprintf(_T("\t\tSpecifies the token to send to each socket.\n"));
+	_tprintf(_T("\t\tLess secure than using /sockettokenlen and stdin.\n\n"));
+
+	_tprintf(_T("\t/sockettokenlen=TokenLength\n"));
+	_tprintf(_T("\t\tSpecifies the length of the token to read from stdin.\n"));
+	_tprintf(_T("\t\tWhen specified, a token must be sent for each socket.\n\n"));
+
 	_tprintf(_T("\t/stdin=FileOrEmptyOrsocket\n"));
 	_tprintf(_T("\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n"));
 	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
@@ -193,9 +201,9 @@ void DumpSyntax(TCHAR *currfile)
 }
 
 bool GxNetworkStarted = false;
-SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd)
+SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd, TCHAR *token, unsigned short tokenlen)
 {
-	if (socketip == NULL || socketport == 0)  return INVALID_SOCKET;
+	if (socketip == NULL || socketport == 0 || tokenlen > 512)  return INVALID_SOCKET;
 
 	// Initialize Winsock.
 	if (!GxNetworkStarted)
@@ -246,6 +254,37 @@ SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd)
 		}
 	}
 
+	// Do authentication first.  Send token to the target.
+	if (tokenlen)
+	{
+		char tokenbuf[512];
+		DWORD bytesread;
+
+		// There's no particularly good way to handle errors here without completely rewriting the function.
+		if (!::ReadFile(::GetStdHandle(STD_INPUT_HANDLE), tokenbuf, tokenlen, &bytesread, NULL) || (unsigned short)bytesread != tokenlen || ::send(s, tokenbuf, (int)tokenlen, 0) != 1)
+		{
+			::closesocket(s);
+
+			return INVALID_SOCKET;
+		}
+	}
+	else if (token != NULL)
+	{
+		char tokenbuf[512];
+
+		for (size_t x = 0; x < 512 && token[x]; x++)
+		{
+			if (token[x] <= 0xFF)  tokenbuf[tokenlen++] = (char)token[x];
+		}
+
+		if (!tokenlen || ::send(s, tokenbuf, (int)tokenlen, 0) != 1)
+		{
+			::closesocket(s);
+
+			return INVALID_SOCKET;
+		}
+	}
+
 	// Send one byte of data to the target so that it knows which file descriptor this socket is associated with.
 	if (::send(s, &fd, 1, 0) != 1)
 	{
@@ -279,6 +318,8 @@ int _tmain(int argc, TCHAR **argv)
 	TCHAR *stderrstr = _T(":stderr");
 	TCHAR *socketip = NULL;
 	unsigned short socketport = 0;
+	TCHAR *sockettoken = NULL;
+	unsigned short sockettokenlen = 0;
 	SOCKET stdinsocket = INVALID_SOCKET;
 	SOCKET stdoutsocket = INVALID_SOCKET;
 	SOCKET stderrsocket = INVALID_SOCKET;
@@ -404,6 +445,8 @@ int _tmain(int argc, TCHAR **argv)
 		}
 		else if (!_tcsncicmp(argv[x], _T("/socketip="), 10))  socketip = argv[x] + 10;
 		else if (!_tcsncicmp(argv[x], _T("/socketport="), 12))  socketport = (unsigned short)_tstoi(argv[x] + 12);
+		else if (!_tcsncicmp(argv[x], _T("/sockettoken="), 13))  sockettoken = argv[x] + 13;
+		else if (!_tcsncicmp(argv[x], _T("/sockettokenlen="), 16))  sockettokenlen = (unsigned short)_tstoi(argv[x] + 16);
 		else if (!_tcsncicmp(argv[x], _T("/stdin="), 7))
 		{
 			if (argv[x][7] == _T('\0'))
@@ -413,7 +456,7 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 7, _T("socket")))
 			{
-				SOCKET stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00');
+				SOCKET stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00', sockettoken, sockettokenlen);
 
 				if (stdinsocket != INVALID_SOCKET)
 				{
@@ -439,7 +482,7 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
 			{
-				SOCKET stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01');
+				SOCKET stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01', sockettoken, sockettokenlen);
 
 				if (stdoutsocket != INVALID_SOCKET)
 				{
@@ -475,7 +518,7 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
 			{
-				SOCKET stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02');
+				SOCKET stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02', sockettoken, sockettokenlen);
 
 				if (stderrsocket != INVALID_SOCKET)
 				{

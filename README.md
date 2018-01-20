@@ -15,7 +15,7 @@ Features
 * Command-line action!
 * Verbose mode tells you exactly how CreateProcess() will be called.  No more guessing!
 * Can redirect stdin, stdout, and stderr to TCP/IP sockets.  Avoid blocking on anonymous pipes or storing output in files!
-* Pre-built binaries against Visual Studio (statically linked runtime, minimal file size of ~100K).
+* Pre-built binaries against Visual Studio (statically linked C++ runtime, minimal file size of ~100K, direct Win32 API calls).
 * Unicode support.
 * Offers almost everything CreateProcess() offers plus a couple of nice extras (e.g. output the process ID to a file).
 * Has a liberal open source license.  MIT or LGPL, your choice.
@@ -152,6 +152,14 @@ Options:
 
         /socketport=PortNumber
                 Specifies the port number to connect to over TCP/IP.
+
+        /sockettoken=Token
+                Specifies the token to send to each socket.
+                Less secure than using /sockettokenlen and stdin.
+
+        /sockettokenlen=TokenLength
+                Specifies the length of the token to read from stdin.
+                When specified, a token must be sent for each socket.
 
         /stdin=FileOrEmptyOrsocket
                 Sets the STARTUPINFO.hStdInput handle for the new process.
