@@ -460,7 +460,7 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 7, _T("socket")))
 			{
-				SOCKET stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00', sockettoken, sockettokenlen);
+				stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00', sockettoken, sockettokenlen);
 
 				if (stdinsocket != INVALID_SOCKET)
 				{
@@ -486,7 +486,7 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
 			{
-				SOCKET stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01', sockettoken, sockettokenlen);
+				stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01', sockettoken, sockettokenlen);
 
 				if (stdoutsocket != INVALID_SOCKET)
 				{
@@ -522,7 +522,7 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
 			{
-				SOCKET stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02', sockettoken, sockettokenlen);
+				stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02', sockettoken, sockettokenlen);
 
 				if (stderrsocket != INVALID_SOCKET)
 				{
