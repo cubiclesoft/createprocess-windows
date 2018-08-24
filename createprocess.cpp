@@ -2,7 +2,7 @@
 // Useful for executing programs from batch files that don't play nice (e.g. Apache)
 // or working around limitations in scripting languages.
 //
-// (C) 2016 CubicleSoft.  All Rights Reserved.
+// (C) 2018 CubicleSoft.  All Rights Reserved.
 
 // Implemented as a single file compilation unit.
 
@@ -43,7 +43,7 @@
 
 void DumpSyntax(TCHAR *currfile)
 {
-	_tprintf(_T("(C) 2016 CubicleSoft.  All Rights Reserved.\n\n"));
+	_tprintf(_T("(C) 2018 CubicleSoft.  All Rights Reserved.\n\n"));
 
 	_tprintf(_T("Syntax:  %s [options] EXEToRun [arguments]\n\n"), currfile);
 
@@ -617,6 +617,7 @@ int _tmain(int argc, TCHAR **argv)
 
 	createflags |= priorityflag;
 	if (startinfo.dwFillAttribute)  startinfo.dwFlags |= STARTF_USEFILLATTRIBUTE;
+	if (startinfo.wShowWindow)  startinfo.dwFlags |= STARTF_USESHOWWINDOW;
 	if (startinfo.hStdInput == INVALID_HANDLE_VALUE)
 	{
 		startinfo.hStdInput = NULL;
