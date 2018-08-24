@@ -726,7 +726,7 @@ int _tmain(int argc, TCHAR **argv)
 		if (startinfo.dwFlags & STARTF_USESTDHANDLES)  _tprintf(_T(" | STARTF_USESTDHANDLES"));
 		_tprintf(_T(",\n"));
 		_tprintf(_T("\t\twShowWindow = "));
-		if (!(startinfo.dwFlags & STARTF_USESHOWWINDOW))  _tprintf(_T("(unused)"));
+		if (!(startinfo.dwFlags & STARTF_USESHOWWINDOW))  _tprintf(_T("(Unused)"));
 		else if (startinfo.wShowWindow == SW_FORCEMINIMIZE)  _tprintf(_T("SW_FORCEMINIMIZE"));
 		else if (startinfo.wShowWindow == SW_HIDE)  _tprintf(_T("SW_HIDE"));
 		else if (startinfo.wShowWindow == SW_MAXIMIZE)  _tprintf(_T("SW_MAXIMIZE"));
