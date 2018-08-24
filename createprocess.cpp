@@ -423,7 +423,11 @@ int _tmain(int argc, TCHAR **argv)
 		else if (!_tcsicmp(argv[x], _T("/f=STARTF_TITLEISAPPID")))  startinfo.dwFlags |= STARTF_TITLEISAPPID;
 		else if (!_tcsicmp(argv[x], _T("/f=STARTF_TITLEISLINKNAME")))  startinfo.dwFlags |= STARTF_TITLEISLINKNAME;
 		else if (!_tcsicmp(argv[x], _T("/f=SW_FORCEMINIMIZE")))  startinfo.wShowWindow = SW_FORCEMINIMIZE;
-		else if (!_tcsicmp(argv[x], _T("/f=SW_HIDE")))  startinfo.wShowWindow = SW_HIDE;
+		else if (!_tcsicmp(argv[x], _T("/f=SW_HIDE")))
+		{
+			startinfo.dwFlags |= STARTF_USESHOWWINDOW;
+			startinfo.wShowWindow = SW_HIDE;
+		}
 		else if (!_tcsicmp(argv[x], _T("/f=SW_MAXIMIZE")))  startinfo.wShowWindow = SW_MAXIMIZE;
 		else if (!_tcsicmp(argv[x], _T("/f=SW_MINIMIZE")))  startinfo.wShowWindow = SW_MINIMIZE;
 		else if (!_tcsicmp(argv[x], _T("/f=SW_RESTORE")))  startinfo.wShowWindow = SW_RESTORE;
@@ -722,7 +726,8 @@ int _tmain(int argc, TCHAR **argv)
 		if (startinfo.dwFlags & STARTF_USESTDHANDLES)  _tprintf(_T(" | STARTF_USESTDHANDLES"));
 		_tprintf(_T(",\n"));
 		_tprintf(_T("\t\twShowWindow = "));
-		if (startinfo.wShowWindow == SW_FORCEMINIMIZE)  _tprintf(_T("SW_FORCEMINIMIZE"));
+		if (!(startinfo.dwFlags & STARTF_USESHOWWINDOW))  _tprintf(_T("(unused)"));
+		else if (startinfo.wShowWindow == SW_FORCEMINIMIZE)  _tprintf(_T("SW_FORCEMINIMIZE"));
 		else if (startinfo.wShowWindow == SW_HIDE)  _tprintf(_T("SW_HIDE"));
 		else if (startinfo.wShowWindow == SW_MAXIMIZE)  _tprintf(_T("SW_MAXIMIZE"));
 		else if (startinfo.wShowWindow == SW_MINIMIZE)  _tprintf(_T("SW_MINIMIZE"));
