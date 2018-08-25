@@ -261,7 +261,7 @@ SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd, 
 		DWORD bytesread;
 
 		// There's no particularly good way to handle errors here without completely rewriting the function.
-		if (!::ReadFile(::GetStdHandle(STD_INPUT_HANDLE), tokenbuf, tokenlen, &bytesread, NULL) || (unsigned short)bytesread != tokenlen || ::send(s, tokenbuf, (int)tokenlen, 0) != 1)
+		if (!::ReadFile(::GetStdHandle(STD_INPUT_HANDLE), tokenbuf, tokenlen, &bytesread, NULL) || (unsigned short)bytesread != tokenlen || ::send(s, tokenbuf, (int)tokenlen, 0) != tokenlen)
 		{
 			::closesocket(s);
 
@@ -277,7 +277,7 @@ SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd, 
 			if (token[x] <= 0xFF)  tokenbuf[tokenlen++] = (char)token[x];
 		}
 
-		if (!tokenlen || ::send(s, tokenbuf, (int)tokenlen, 0) != 1)
+		if (!tokenlen || ::send(s, tokenbuf, (int)tokenlen, 0) != tokenlen)
 		{
 			::closesocket(s);
 
