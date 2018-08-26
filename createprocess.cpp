@@ -326,7 +326,7 @@ int _tmain(int argc, TCHAR **argv)
 	PROCESS_INFORMATION procinfo = {0};
 	DWORD exitcode = 0;
 
-	if (argc < 3)
+	if (argc < 2)
 	{
 		DumpSyntax(argv[0]);
 
