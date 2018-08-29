@@ -28,7 +28,7 @@ Useful Information
 Running the command by itself will display the options, but it never hurts to have a complete rundown of the options:
 
 ```
-Syntax:  createprocess [options] EXEToRun [arguments]
+Syntax:  createprocess.exe [options] EXEToRun [arguments]
 
 Options:
         /v
