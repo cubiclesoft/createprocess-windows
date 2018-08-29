@@ -41,163 +41,194 @@
 	#define STARTF_PREVENTPINNING      0x00002000L
 #endif
 
+#ifdef SUBSYSTEM_WINDOWS
+// If the caller is a console application and is waiting for this application to complete, then attach to the console.
+void InitVerboseMode(void)
+{
+	if (::AttachConsole(ATTACH_PARENT_PROCESS))
+	{
+		if (::GetStdHandle(STD_OUTPUT_HANDLE) != INVALID_HANDLE_VALUE)
+		{
+			freopen("CONOUT$", "w", stdout);
+			setvbuf(stdout, NULL, _IONBF, 0);
+		}
+
+		if (::GetStdHandle(STD_ERROR_HANDLE) != INVALID_HANDLE_VALUE)
+		{
+			freopen("CONOUT$", "w", stderr);
+			setvbuf(stderr, NULL, _IONBF, 0);
+		}
+	}
+}
+#endif
+
 void DumpSyntax(TCHAR *currfile)
 {
+#ifdef SUBSYSTEM_WINDOWS
+	InitVerboseMode();
+#endif
+
 	_tprintf(_T("(C) 2018 CubicleSoft.  All Rights Reserved.\n\n"));
 
 	_tprintf(_T("Syntax:  %s [options] EXEToRun [arguments]\n\n"), currfile);
 
 	_tprintf(_T("Options:\n"));
 
-	_tprintf(_T("\t/v\n"));
-	_tprintf(_T("\tVerbose mode.\n\n"));
+	_tprintf(_T("\t/v\n\
+\tVerbose mode.\n\
+\n\
+\t/w[=Milliseconds]\n\
+\tWaits for the process to complete before exiting.\n\
+\tThe default behavior is to return immediately.\n\
+\tIf Milliseconds is specified, the number of milliseconds to wait.\n\
+\tReturn code, if any, is returned to caller.\n\
+\n\
+\t/pid=File\n\
+\tWrites the process ID to the specified file.\n\
+\n\
+\t/term\n\
+\tUsed with /w=Milliseconds.\n\
+\tTerminates the process when the wait time is up.\n\
+\n\
+\t/f=PriorityClass\n\
+\t\tSets the priority class of the new process.\n\
+\t\tThere is only one priority class per process.\n\
+\t\tThe 'PriorityClass' can be one of:\n\
+\t\tABOVE_NORMAL_PRIORITY_CLASS\n\
+\t\tBELOW_NORMAL_PRIORITY_CLASS\n\
+\t\tHIGH_PRIORITY_CLASS\n\
+\t\tIDLE_PRIORITY_CLASS\n\
+\t\tNORMAL_PRIORITY_CLASS\n\
+\t\tREALTIME_PRIORITY_CLASS\n\
+\n\
+\t/f=CreateFlag\n\
+\t\tSets a creation flag for the new process.\n\
+\t\tMultiple /f options can be specified.\n\
+\t\tEach 'CreateFlag' can be one of:\n\
+\t\tCREATE_DEFAULT_ERROR_MODE\n\
+\t\tCREATE_NEW_CONSOLE\n\
+\t\tCREATE_NEW_PROCESS_GROUP\n\
+\t\tCREATE_NO_WINDOW\n\
+\t\tCREATE_PROTECTED_PROCESS\n\
+\t\tCREATE_PRESERVE_CODE_AUTHZ_LEVEL\n\
+\t\tCREATE_SEPARATE_WOW_VDM\n\
+\t\tCREATE_SHARED_WOW_VDM\n\
+\t\tDEBUG_ONLY_THIS_PROCESS\n\
+\t\tDEBUG_PROCESS\n\
+\t\tDETACHED_PROCESS\n\
+\t\tINHERIT_PARENT_AFFINITY\n\
+\n\
+\t/dir=StartDir\n\
+\t\tSets the starting directory of the new process.\n\
+\n\
+\t/desktop=Desktop\n\
+\t\tSets the STARTUPINFO.lpDesktop member to target a specific desktop.\n\
+\n\
+\t/title=WindowTitle\n\
+\t\tSets the STARTUPINFO.lpTitle member to a specific title.\n\
+\n\
+\t/x=XPositionInPixels\n\
+\t\tSets the STARTUPINFO.dwX member to a specific x-axis position, in pixels.\n\
+\n\
+\t/y=YPositionInPixels\n\
+\t\tSets the STARTUPINFO.dwY member to a specific y-axis position, in pixels.\n\
+\n\
+\t/width=WidthInPixels\n\
+\t\tSets the STARTUPINFO.dwXSize member to a specific width, in pixels.\n\
+\n\
+\t/height=HeightInPixels\n\
+\t\tSets the STARTUPINFO.dwYSize member to a specific height, in pixels.\n\
+\n\
+\t/xchars=BufferWidthInCharacters\n\
+\t\tSets the STARTUPINFO.dwXCountChars member to buffer width, in characters.\n\
+\n\
+\t/ychars=BufferHeightInCharacters\n\
+\t\tSets the STARTUPINFO.dwYCountChars member to buffer height, in characters.\n\
+\n\
+\t/f=FillAttribute\n\
+\t\tSets the STARTUPINFO.dwFillAttribute member to buffer height, in characters.\n\
+\t\tMultiple /f options can be specified.\n\
+\t\tEach 'FillAttribute' can be one of:\n\
+\t\tFOREGROUND_RED\n\
+\t\tFOREGROUND_GREEN\n\
+\t\tFOREGROUND_BLUE\n\
+\t\tFOREGROUND_INTENSITY\n\
+\t\tBACKGROUND_RED\n\
+\t\tBACKGROUND_GREEN\n\
+\t\tBACKGROUND_BLUE\n\
+\t\tBACKGROUND_INTENSITY\n\
+\n\
+\t/f=StartupFlag\n\
+\t\tSets the STARTUPINFO.dwFlags flag for the new process.\n\
+\t\tMultiple /f options can be specified.\n\
+\t\tEach 'StartupFlag' can be one of:\n\
+\t\tSTARTF_FORCEONFEEDBACK\n\
+\t\tSTARTF_FORCEOFFFEEDBACK\n\
+\t\tSTARTF_PREVENTPINNING\n\
+\t\tSTARTF_RUNFULLSCREEN\n\
+\t\tSTARTF_TITLEISAPPID\n\
+\t\tSTARTF_TITLEISLINKNAME\n\
+\n\
+\t/f=ShowWindow\n\
+\t\tSets the STARTUPINFO.wShowWindow flag for the new process.\n\
+\t\tThere is only one show window option per process.\n\
+\t\tThe 'ShowWindow' value can be one of:\n\
+\t\tSW_FORCEMINIMIZE\n\
+\t\tSW_HIDE\n\
+\t\tSW_MAXIMIZE\n\
+\t\tSW_MINIMIZE\n\
+\t\tSW_RESTORE\n\
+\t\tSW_SHOW\n\
+\t\tSW_SHOWDEFAULT\n\
+\t\tSW_SHOWMAXIMIZED\n\
+\t\tSW_SHOWMINIMIZED\n\
+\t\tSW_SHOWMINNOACTIVE\n\
+\t\tSW_SHOWNA\n\
+\t\tSW_SHOWNOACTIVATE\n\
+\t\tSW_SHOWNORMAL\n\
+\n\
+\t/hotkey=HotkeyValue\n\
+\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n\
+\t\tSpecifies the wParam member of a WM_SETHOKEY message to the new process.\n\
+\n\
+\t/socketip=IPAddress\n\
+\t\tSpecifies the IP address to connect to over TCP/IP.\n\
+\n\
+\t/socketport=PortNumber\n\
+\t\tSpecifies the port number to connect to over TCP/IP.\n\
+\n\
+\t/sockettoken=Token\n\
+\t\tSpecifies the token to send to each socket.\n\
+\t\tLess secure than using /sockettokenlen and stdin.\n\
+\n\
+\t/sockettokenlen=TokenLength\n\
+\t\tSpecifies the length of the token to read from stdin.\n\
+\t\tWhen specified, a token must be sent for each socket.\n\
+\n\
+\t/stdin=FileOrEmptyOrsocket\n\
+\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n\
+\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n\
+\t\tWhen this option is 'socket', the /socket IP and port are used.\n\
+\t\tWhen this option is not specified, the current stdin is used.\n\
+\n\
+\t/stdout=FileOrEmptyOrsocket\n\
+\t\tSets the STARTUPINFO.hStdOutput handle for the new process.\n\
+\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n\
+\t\tWhen this option is 'socket', the /socket IP and port are used.\n\
+\t\tWhen this option is not specified, the current stdout is used.\n\
+\n\
+\t/stderr=FileOrEmptyOrstdoutOrsocket\n\
+\t\tSets the STARTUPINFO.hStdError handle for the new process.\n\
+\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n\
+\t\tWhen this option is 'stdout', the value of stdout is used.\n\
+\t\tWhen this option is 'socket', the /socket IP and port are used.\n\
+\t\tWhen this option is not specified, the current stderr is used.\n\n"));
 
-	_tprintf(_T("\t/w[=Milliseconds]\n"));
-	_tprintf(_T("\tWaits for the process to complete before exiting.\n"));
-	_tprintf(_T("\tThe default behavior is to return immediately.\n"));
-	_tprintf(_T("\tIf Milliseconds is specified, the number of milliseconds to wait.\n"));
-	_tprintf(_T("\tReturn code, if any, is returned to caller.\n\n"));
-
-	_tprintf(_T("\t/pid=File\n"));
-	_tprintf(_T("\tWrites the process ID to the specified file.\n\n"));
-
-	_tprintf(_T("\t/term\n"));
-	_tprintf(_T("\tUsed with /w=Milliseconds.\n"));
-	_tprintf(_T("\tTerminates the process when the wait time is up.\n\n"));
-
-	_tprintf(_T("\t/f=PriorityClass\n"));
-	_tprintf(_T("\t\tSets the priority class of the new process.\n"));
-	_tprintf(_T("\t\tThere is only one priority class per process.\n"));
-	_tprintf(_T("\t\tThe 'PriorityClass' can be one of:\n"));
-	_tprintf(_T("\t\tABOVE_NORMAL_PRIORITY_CLASS\n"));
-	_tprintf(_T("\t\tBELOW_NORMAL_PRIORITY_CLASS\n"));
-	_tprintf(_T("\t\tHIGH_PRIORITY_CLASS\n"));
-	_tprintf(_T("\t\tIDLE_PRIORITY_CLASS\n"));
-	_tprintf(_T("\t\tNORMAL_PRIORITY_CLASS\n"));
-	_tprintf(_T("\t\tREALTIME_PRIORITY_CLASS\n\n"));
-
-	_tprintf(_T("\t/f=CreateFlag\n"));
-	_tprintf(_T("\t\tSets a creation flag for the new process.\n"));
-	_tprintf(_T("\t\tMultiple /f options can be specified.\n"));
-	_tprintf(_T("\t\tEach 'CreateFlag' can be one of:\n"));
-	_tprintf(_T("\t\tCREATE_DEFAULT_ERROR_MODE\n"));
-	_tprintf(_T("\t\tCREATE_NEW_CONSOLE\n"));
-	_tprintf(_T("\t\tCREATE_NEW_PROCESS_GROUP\n"));
-	_tprintf(_T("\t\tCREATE_NO_WINDOW\n"));
-	_tprintf(_T("\t\tCREATE_PROTECTED_PROCESS\n"));
-	_tprintf(_T("\t\tCREATE_PRESERVE_CODE_AUTHZ_LEVEL\n"));
-	_tprintf(_T("\t\tCREATE_SEPARATE_WOW_VDM\n"));
-	_tprintf(_T("\t\tCREATE_SHARED_WOW_VDM\n"));
-	_tprintf(_T("\t\tDEBUG_ONLY_THIS_PROCESS\n"));
-	_tprintf(_T("\t\tDEBUG_PROCESS\n"));
-	_tprintf(_T("\t\tDETACHED_PROCESS\n"));
-	_tprintf(_T("\t\tINHERIT_PARENT_AFFINITY\n\n"));
-
-	_tprintf(_T("\t/dir=StartDir\n"));
-	_tprintf(_T("\t\tSets the starting directory of the new process.\n\n"));
-
-	_tprintf(_T("\t/desktop=Desktop\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.lpDesktop member to target a specific desktop.\n\n"));
-
-	_tprintf(_T("\t/title=WindowTitle\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.lpTitle member to a specific title.\n\n"));
-
-	_tprintf(_T("\t/x=XPositionInPixels\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwX member to a specific x-axis position, in pixels.\n\n"));
-
-	_tprintf(_T("\t/y=YPositionInPixels\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwY member to a specific y-axis position, in pixels.\n\n"));
-
-	_tprintf(_T("\t/width=WidthInPixels\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwXSize member to a specific width, in pixels.\n\n"));
-
-	_tprintf(_T("\t/height=HeightInPixels\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwYSize member to a specific height, in pixels.\n\n"));
-
-	_tprintf(_T("\t/xchars=BufferWidthInCharacters\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwXCountChars member to buffer width, in characters.\n\n"));
-
-	_tprintf(_T("\t/ychars=BufferHeightInCharacters\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwYCountChars member to buffer height, in characters.\n\n"));
-
-	_tprintf(_T("\t/f=FillAttribute\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwFillAttribute member to buffer height, in characters.\n"));
-	_tprintf(_T("\t\tMultiple /f options can be specified.\n"));
-	_tprintf(_T("\t\tEach 'FillAttribute' can be one of:\n"));
-	_tprintf(_T("\t\tFOREGROUND_RED\n"));
-	_tprintf(_T("\t\tFOREGROUND_GREEN\n"));
-	_tprintf(_T("\t\tFOREGROUND_BLUE\n"));
-	_tprintf(_T("\t\tFOREGROUND_INTENSITY\n"));
-	_tprintf(_T("\t\tBACKGROUND_RED\n"));
-	_tprintf(_T("\t\tBACKGROUND_GREEN\n"));
-	_tprintf(_T("\t\tBACKGROUND_BLUE\n"));
-	_tprintf(_T("\t\tBACKGROUND_INTENSITY\n\n"));
-
-	_tprintf(_T("\t/f=StartupFlag\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.dwFlags flag for the new process.\n"));
-	_tprintf(_T("\t\tMultiple /f options can be specified.\n"));
-	_tprintf(_T("\t\tEach 'StartupFlag' can be one of:\n"));
-	_tprintf(_T("\t\tSTARTF_FORCEONFEEDBACK\n"));
-	_tprintf(_T("\t\tSTARTF_FORCEOFFFEEDBACK\n"));
-	_tprintf(_T("\t\tSTARTF_PREVENTPINNING\n"));
-	_tprintf(_T("\t\tSTARTF_RUNFULLSCREEN\n"));
-	_tprintf(_T("\t\tSTARTF_TITLEISAPPID\n"));
-	_tprintf(_T("\t\tSTARTF_TITLEISLINKNAME\n\n"));
-
-	_tprintf(_T("\t/f=ShowWindow\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.wShowWindow flag for the new process.\n"));
-	_tprintf(_T("\t\tThere is only one show window option per process.\n"));
-	_tprintf(_T("\t\tThe 'ShowWindow' value can be one of:\n"));
-	_tprintf(_T("\t\tSW_FORCEMINIMIZE\n"));
-	_tprintf(_T("\t\tSW_HIDE\n"));
-	_tprintf(_T("\t\tSW_MAXIMIZE\n"));
-	_tprintf(_T("\t\tSW_MINIMIZE\n"));
-	_tprintf(_T("\t\tSW_RESTORE\n"));
-	_tprintf(_T("\t\tSW_SHOW\n"));
-	_tprintf(_T("\t\tSW_SHOWDEFAULT\n"));
-	_tprintf(_T("\t\tSW_SHOWMAXIMIZED\n"));
-	_tprintf(_T("\t\tSW_SHOWMINIMIZED\n"));
-	_tprintf(_T("\t\tSW_SHOWMINNOACTIVE\n"));
-	_tprintf(_T("\t\tSW_SHOWNA\n"));
-	_tprintf(_T("\t\tSW_SHOWNOACTIVATE\n"));
-	_tprintf(_T("\t\tSW_SHOWNORMAL\n\n"));
-
-	_tprintf(_T("\t/hotkey=HotkeyValue\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n"));
-	_tprintf(_T("\t\tSpecifies the wParam member of a WM_SETHOKEY message to the new process.\n\n"));
-
-	_tprintf(_T("\t/socketip=IPAddress\n"));
-	_tprintf(_T("\t\tSpecifies the IP address to connect to over TCP/IP.\n\n"));
-
-	_tprintf(_T("\t/socketport=PortNumber\n"));
-	_tprintf(_T("\t\tSpecifies the port number to connect to over TCP/IP.\n\n"));
-
-	_tprintf(_T("\t/sockettoken=Token\n"));
-	_tprintf(_T("\t\tSpecifies the token to send to each socket.\n"));
-	_tprintf(_T("\t\tLess secure than using /sockettokenlen and stdin.\n\n"));
-
-	_tprintf(_T("\t/sockettokenlen=TokenLength\n"));
-	_tprintf(_T("\t\tSpecifies the length of the token to read from stdin.\n"));
-	_tprintf(_T("\t\tWhen specified, a token must be sent for each socket.\n\n"));
-
-	_tprintf(_T("\t/stdin=FileOrEmptyOrsocket\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.hStdInput handle for the new process.\n"));
-	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
-	_tprintf(_T("\t\tWhen this option is 'socket', the /socket IP and port are used.\n"));
-	_tprintf(_T("\t\tWhen this option is not specified, the current stdin is used.\n\n"));
-
-	_tprintf(_T("\t/stdout=FileOrEmptyOrsocket\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.hStdOutput handle for the new process.\n"));
-	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
-	_tprintf(_T("\t\tWhen this option is 'socket', the /socket IP and port are used.\n"));
-	_tprintf(_T("\t\tWhen this option is not specified, the current stdout is used.\n\n"));
-
-	_tprintf(_T("\t/stderr=FileOrEmptyOrstdoutOrsocket\n"));
-	_tprintf(_T("\t\tSets the STARTUPINFO.hStdError handle for the new process.\n"));
-	_tprintf(_T("\t\tWhen this option is empty, INVALID_HANDLE_VALUE is used.\n"));
-	_tprintf(_T("\t\tWhen this option is 'stdout', the value of stdout is used.\n"));
-	_tprintf(_T("\t\tWhen this option is 'socket', the /socket IP and port are used.\n"));
-	_tprintf(_T("\t\tWhen this option is not specified, the current stderr is used.\n\n"));
+#ifdef SUBSYSTEM_WINDOWS
+	_tprintf(_T("\t/attach\n"));
+	_tprintf(_T("\t\tAttempt to attach to a parent console if it exists.\n"));
+	_tprintf(_T("\t\tAlso resets standard handles back to defaults.\n\n"));
+#endif
 }
 
 bool GxNetworkStarted = false;
@@ -445,7 +476,7 @@ int _tmain(int argc, TCHAR **argv)
 			stdinstr = _T(":hotkey");
 
 			startinfo.dwFlags |= STARTF_USEHOTKEY;
-			startinfo.dwFlags ^= ~STARTF_USESTDHANDLES;
+			startinfo.dwFlags &= ~STARTF_USESTDHANDLES;
 		}
 		else if (!_tcsncicmp(argv[x], _T("/socketip="), 10))  socketip = argv[x] + 10;
 		else if (!_tcsncicmp(argv[x], _T("/socketport="), 12))  socketport = (unsigned short)_tstoi(argv[x] + 12);
@@ -474,7 +505,7 @@ int _tmain(int argc, TCHAR **argv)
 				stdinstr = argv[x] + 7;
 			}
 
-			startinfo.dwFlags ^= ~STARTF_USEHOTKEY;
+			startinfo.dwFlags &= ~STARTF_USEHOTKEY;
 			startinfo.dwFlags |= STARTF_USESTDHANDLES;
 		}
 		else if (!_tcsncicmp(argv[x], _T("/stdout="), 8))
@@ -510,7 +541,7 @@ int _tmain(int argc, TCHAR **argv)
 				}
 			}
 
-			startinfo.dwFlags ^= ~STARTF_USEHOTKEY;
+			startinfo.dwFlags &= ~STARTF_USEHOTKEY;
 			startinfo.dwFlags |= STARTF_USESTDHANDLES;
 		}
 		else if (!_tcsncicmp(argv[x], _T("/stderr="), 8))
@@ -546,7 +577,22 @@ int _tmain(int argc, TCHAR **argv)
 				}
 			}
 
-			startinfo.dwFlags ^= ~STARTF_USEHOTKEY;
+			startinfo.dwFlags &= ~STARTF_USEHOTKEY;
+			startinfo.dwFlags |= STARTF_USESTDHANDLES;
+		}
+		else if (!_tcsicmp(argv[x], _T("/attach")))
+		{
+#ifdef SUBSYSTEM_WINDOWS
+			// For the Windows subsystem only, attempt to attach to a parent console if it exists.
+			InitVerboseMode();
+#endif
+
+			// Reset handles.
+			startinfo.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
+			startinfo.hStdOutput = ::GetStdHandle(STD_OUTPUT_HANDLE);
+			startinfo.hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
+
+			startinfo.dwFlags &= ~STARTF_USEHOTKEY;
 			startinfo.dwFlags |= STARTF_USESTDHANDLES;
 		}
 		else
@@ -559,6 +605,10 @@ int _tmain(int argc, TCHAR **argv)
 	// Failed to find required executable.
 	if (x == argc)
 	{
+#ifdef SUBSYSTEM_WINDOWS
+		InitVerboseMode();
+#endif
+
 		_tprintf(_T("Error:  'EXEToRun' not specified.\n\n"));
 		DumpSyntax(argv[0]);
 
@@ -641,6 +691,10 @@ int _tmain(int argc, TCHAR **argv)
 	// Run verbose output.
 	if (verbose)
 	{
+#ifdef SUBSYSTEM_WINDOWS
+		InitVerboseMode();
+#endif
+
 		_tprintf(_T("Arguments:\n"));
 		for (x = 0; x < argc; x++)
 		{
@@ -754,6 +808,10 @@ int _tmain(int argc, TCHAR **argv)
 	// Execute CreateProcess().
 	if (!::CreateProcess(appname, commandline, &secattr, &secattr, (startinfo.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE), createflags, NULL, startdir, &startinfo, &procinfo))
 	{
+#ifdef SUBSYSTEM_WINDOWS
+		InitVerboseMode();
+#endif
+
 		DWORD errnum = ::GetLastError();
 		LPTSTR errmsg = NULL;
 
@@ -778,7 +836,14 @@ int _tmain(int argc, TCHAR **argv)
 			char pidbuffer[65];
 			_itoa(procinfo.dwProcessId, pidbuffer, 10);
 			HANDLE hpidfile = ::CreateFile(pidfile, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &secattr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			if (hpidfile == INVALID_HANDLE_VALUE)  _tprintf(_T("PID file '%s' was unable to be opened.\n"), pidfile);
+			if (hpidfile == INVALID_HANDLE_VALUE)
+			{
+#ifdef SUBSYSTEM_WINDOWS
+				InitVerboseMode();
+#endif
+
+				_tprintf(_T("PID file '%s' was unable to be opened.\n"), pidfile);
+			}
 			else
 			{
 				::WriteFile(hpidfile, pidbuffer, (DWORD)strlen(pidbuffer), NULL, NULL);
@@ -827,3 +892,100 @@ int _tmain(int argc, TCHAR **argv)
 
 	return (int)exitcode;
 }
+
+#ifdef SUBSYSTEM_WINDOWS
+#ifndef UNICODE
+// Swiped from:  https://stackoverflow.com/questions/291424/canonical-way-to-parse-the-command-line-into-arguments-in-plain-c-windows-api
+LPSTR* CommandLineToArgvA(LPSTR lpCmdLine, INT *pNumArgs)
+{
+	int retval;
+	retval = ::MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, lpCmdLine, -1, NULL, 0);
+	if (!SUCCEEDED(retval))  return NULL;
+
+	LPWSTR lpWideCharStr = (LPWSTR)malloc(retval * sizeof(WCHAR));
+	if (lpWideCharStr == NULL)  return NULL;
+
+	retval = ::MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, lpCmdLine, -1, lpWideCharStr, retval);
+	if (!SUCCEEDED(retval))
+	{
+		free(lpWideCharStr);
+
+		return NULL;
+	}
+
+	int numArgs;
+	LPWSTR* args;
+	args = ::CommandLineToArgvW(lpWideCharStr, &numArgs);
+	free(lpWideCharStr);
+	if (args == NULL)  return NULL;
+
+	int storage = numArgs * sizeof(LPSTR);
+	for (int i = 0; i < numArgs; i++)
+	{
+		BOOL lpUsedDefaultChar = FALSE;
+		retval = ::WideCharToMultiByte(CP_ACP, 0, args[i], -1, NULL, 0, NULL, &lpUsedDefaultChar);
+		if (!SUCCEEDED(retval))
+		{
+			::LocalFree(args);
+
+			return NULL;
+		}
+
+		storage += retval;
+	}
+
+	LPSTR* result = (LPSTR *)::LocalAlloc(LMEM_FIXED, storage);
+	if (result == NULL)
+	{
+		LocalFree(args);
+
+		return NULL;
+	}
+
+	int bufLen = storage - numArgs * sizeof(LPSTR);
+	LPSTR buffer = ((LPSTR)result) + numArgs * sizeof(LPSTR);
+	for (int i = 0; i < numArgs; ++ i)
+	{
+		BOOL lpUsedDefaultChar = FALSE;
+		retval = ::WideCharToMultiByte(CP_ACP, 0, args[i], -1, buffer, bufLen, NULL, &lpUsedDefaultChar);
+		if (!SUCCEEDED(retval))
+		{
+			::LocalFree(result);
+			::LocalFree(args);
+
+			return NULL;
+		}
+
+		result[i] = buffer;
+		buffer += retval;
+		bufLen -= retval;
+	}
+
+	::LocalFree(args);
+
+	*pNumArgs = numArgs;
+	return result;
+}
+#endif
+
+int CALLBACK WinMain(HINSTANCE /* hInstance */, HINSTANCE /* hPrevInstance */, LPSTR lpCmdLine, int /* nCmdShow */)
+{
+	int argc;
+	TCHAR **argv;
+	int result;
+
+#ifdef UNICODE
+	argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+#else
+	argv = CommandLineToArgvA(lpCmdLine, &argc);
+#endif
+
+	if (argv == NULL)  return 0;
+
+	result = _tmain(argc, argv);
+
+	::LocalFree(argv);
+
+	return result;
+}
+#endif

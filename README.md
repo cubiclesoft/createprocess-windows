@@ -15,7 +15,8 @@ Features
 * Command-line action!
 * Verbose mode tells you exactly how CreateProcess() will be called.  No more guessing!
 * Can redirect stdin, stdout, and stderr to TCP/IP sockets.  Avoid blocking on anonymous pipes or storing output in files!
-* Pre-built binaries against Visual Studio (statically linked C++ runtime, minimal file size of ~100K, direct Win32 API calls).
+* Pre-built binaries using Visual Studio (statically linked C++ runtime, minimal file size of ~107K, direct Win32 API calls).
+* Windows subsystem variant.
 * Unicode support.
 * Offers almost everything CreateProcess() offers plus a couple of nice extras (e.g. output the process ID to a file).
 * Has a liberal open source license.  MIT or LGPL, your choice.
@@ -181,9 +182,18 @@ Options:
                 When this option is not specified, the current stderr is used.
 ```
 
-That's pretty nifty.  But what is even more impressive is the verbose output option that shows exactly how CreateProcess() will be called.  I'll let you take that for a spin though.
+That's pretty nifty.  But what is even more impressive is the verbose output `/v` option that shows exactly how CreateProcess() will be called.  I'll let you take that for a spin though.
 
 Even the most hardcore command-line enthusiast should be drooling right now.  Be sure to check out the source code.
+
+Windows Subsystem Variant
+-------------------------
+
+While `createprocess.exe` is intended for use with console apps, `createprocess-win.exe` is intended for detached console and GUI applications.  Starting `createprocess.exe` in certain situations will briefly flash a console window before starting the target process.  Calling `createprocess-win.exe` instead will no longer show the console window.
+
+Why not just use `createprocess-win.exe`?  Since `createprocess-win.exe` starts as a Windows GUI application, there is the tendency for it to be run in the background and may not behave as expected with various handles.  The software is a little bit trickier to work with as a result.  It's also a few KB larger than `createprocess.exe`.
+
+There is one additional option specifically for `createprocess-win.exe` called `/attach` which attempts to attach to the console of the parent process (if any) and will also reset the standard handles.  The `/attach` option, if used, should generally be specified before other options.
 
 Sources
 -------
