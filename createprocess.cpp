@@ -2,7 +2,7 @@
 // Useful for executing programs from batch files that don't play nice (e.g. Apache)
 // or working around limitations in scripting languages.
 //
-// (C) 2018 CubicleSoft.  All Rights Reserved.
+// (C) 2019 CubicleSoft.  All Rights Reserved.
 
 // Implemented as a single file compilation unit.
 
@@ -68,7 +68,7 @@ void DumpSyntax(TCHAR *currfile)
 	InitVerboseMode();
 #endif
 
-	_tprintf(_T("(C) 2018 CubicleSoft.  All Rights Reserved.\n\n"));
+	_tprintf(_T("(C) 2019 CubicleSoft.  All Rights Reserved.\n\n"));
 
 	_tprintf(_T("Syntax:  %s [options] EXEToRun [arguments]\n\n"), currfile);
 
@@ -808,12 +808,12 @@ int _tmain(int argc, TCHAR **argv)
 	// Execute CreateProcess().
 	if (!::CreateProcess(appname, commandline, &secattr, &secattr, (startinfo.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE), createflags, NULL, startdir, &startinfo, &procinfo))
 	{
+		DWORD errnum = ::GetLastError();
+		LPTSTR errmsg = NULL;
+
 #ifdef SUBSYSTEM_WINDOWS
 		InitVerboseMode();
 #endif
-
-		DWORD errnum = ::GetLastError();
-		LPTSTR errmsg = NULL;
 
 		::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errmsg, 0, NULL);
 		_tprintf(_T("An error occurred while attempting to start the process:\n"));
