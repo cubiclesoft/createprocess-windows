@@ -327,6 +327,68 @@ SOCKET ConnectSocketHandle(TCHAR *socketip, unsigned short socketport, char fd, 
 	return s;
 }
 
+// Moved these out of the main function into the global namespace so the thread entry functions have relatively clean access to them.
+SOCKET Gx_stdinsocket = INVALID_SOCKET;
+HANDLE Gx_stdinwritehandle = NULL;
+
+SOCKET Gx_stdoutsocket = INVALID_SOCKET;
+HANDLE Gx_stdoutreadhandle = NULL;
+
+SOCKET Gx_stderrsocket = INVALID_SOCKET;
+HANDLE Gx_stderrreadhandle = NULL;
+
+DWORD WINAPI StdinSocketHandler(LPVOID)
+{
+	char buffer[65536];
+	int bufferlen;
+
+	do
+	{
+		// Stdin socket -> stdin pipe.
+		bufferlen = ::recv(Gx_stdinsocket, buffer, sizeof(buffer), 0);
+		if (!bufferlen || bufferlen == SOCKET_ERROR)  break;
+
+		if (!::WriteFile(Gx_stdinwritehandle, buffer, (DWORD)bufferlen, NULL, NULL))  break;
+
+	} while (1);
+
+	return 0;
+}
+
+DWORD WINAPI StdoutSocketHandler(LPVOID)
+{
+	char buffer[65536];
+	DWORD bufferlen;
+
+	do
+	{
+		// Stdout pipe -> stdout socket.
+		if (!::ReadFile(Gx_stdoutreadhandle, buffer, sizeof(buffer), &bufferlen, NULL))  break;
+
+		if (bufferlen && ::send(Gx_stdoutsocket, buffer, (int)bufferlen, 0) != bufferlen)  break;
+
+	} while (1);
+
+	return 0;
+}
+
+DWORD WINAPI StderrSocketHandler(LPVOID)
+{
+	char buffer[65536];
+	DWORD bufferlen;
+
+	do
+	{
+		// Stderr pipe -> stderr socket.
+		if (!::ReadFile(Gx_stderrreadhandle, buffer, sizeof(buffer), &bufferlen, NULL))  break;
+
+		if (bufferlen && ::send(Gx_stderrsocket, buffer, (int)bufferlen, 0) != bufferlen)  break;
+
+	} while (1);
+
+	return 0;
+}
+
 int _tmain(int argc, TCHAR **argv)
 {
 	bool verbose = false;
@@ -351,9 +413,8 @@ int _tmain(int argc, TCHAR **argv)
 	unsigned short socketport = 0;
 	TCHAR *sockettoken = NULL;
 	unsigned short sockettokenlen = 0;
-	SOCKET stdinsocket = INVALID_SOCKET;
-	SOCKET stdoutsocket = INVALID_SOCKET;
-	SOCKET stderrsocket = INVALID_SOCKET;
+	HANDLE temphandle = NULL, stdinread = NULL, stdoutwrite = NULL, stderrwrite = NULL;
+	HANDLE stdinthread = NULL, stdoutthread = NULL, stderrthread = NULL;
 	PROCESS_INFORMATION procinfo = {0};
 	DWORD exitcode = 0;
 
@@ -491,11 +552,17 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 7, _T("socket")))
 			{
-				stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00', sockettoken, sockettokenlen);
+				Gx_stdinsocket = ConnectSocketHandle(socketip, socketport, '\x00', sockettoken, sockettokenlen);
+				temphandle = NULL;
 
-				if (stdinsocket != INVALID_SOCKET)
+				if (Gx_stdinsocket != INVALID_SOCKET && stdinread == NULL && Gx_stdinwritehandle == NULL && ::CreatePipe(&stdinread, &temphandle, &secattr, 0))
 				{
-					startinfo.hStdInput = (HANDLE)stdinsocket;
+					wait = true;
+
+					::SetHandleInformation(temphandle, HANDLE_FLAG_INHERIT, 0);
+					Gx_stdinwritehandle = temphandle;
+
+					startinfo.hStdInput = stdinread;
 					stdinstr = _T(":socket");
 				}
 			}
@@ -517,11 +584,17 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
 			{
-				stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01', sockettoken, sockettokenlen);
+				Gx_stdoutsocket = ConnectSocketHandle(socketip, socketport, '\x01', sockettoken, sockettokenlen);
+				temphandle = NULL;
 
-				if (stdoutsocket != INVALID_SOCKET)
+				if (Gx_stdoutsocket != INVALID_SOCKET && stdoutwrite == NULL && Gx_stdoutreadhandle == NULL && ::CreatePipe(&temphandle, &stdoutwrite, &secattr, 0))
 				{
-					startinfo.hStdOutput = (HANDLE)stdoutsocket;
+					wait = true;
+
+					::SetHandleInformation(temphandle, HANDLE_FLAG_INHERIT, 0);
+					Gx_stdoutreadhandle = temphandle;
+
+					startinfo.hStdOutput = stdoutwrite;
 					stdoutstr = _T(":socket");
 				}
 			}
@@ -553,11 +626,17 @@ int _tmain(int argc, TCHAR **argv)
 			}
 			else if (!_tcsicmp(argv[x] + 8, _T("socket")))
 			{
-				stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02', sockettoken, sockettokenlen);
+				Gx_stderrsocket = ConnectSocketHandle(socketip, socketport, '\x02', sockettoken, sockettokenlen);
+				temphandle = NULL;
 
-				if (stderrsocket != INVALID_SOCKET)
+				if (Gx_stderrsocket != INVALID_SOCKET && stderrwrite == NULL && Gx_stderrreadhandle == NULL && ::CreatePipe(&temphandle, &stderrwrite, &secattr, 0))
 				{
-					startinfo.hStdError = (HANDLE)stderrsocket;
+					wait = true;
+
+					::SetHandleInformation(temphandle, HANDLE_FLAG_INHERIT, 0);
+					Gx_stderrreadhandle = temphandle;
+
+					startinfo.hStdError = stderrwrite;
 					stderrstr = _T(":socket");
 				}
 			}
@@ -644,7 +723,7 @@ int _tmain(int argc, TCHAR **argv)
 
 		z3 = _tcslen(argv[y]);
 		for (z2 = 0; z2 < z3 && argv[y][z2] != _T(' '); z2++);
-		if (z2 < z3)
+		if (!z3 || z2 < z3)
 		{
 			commandline[z] = _T('\"');
 			z++;
@@ -861,6 +940,58 @@ int _tmain(int argc, TCHAR **argv)
 				else  _tprintf(_T("Waiting for process to complete (%ims)...\n"), waitamount);
 			}
 
+			// If socket handles are used, start relevant threads to pass the data around.
+			if (Gx_stdinsocket != INVALID_SOCKET && stdinread != NULL)
+			{
+				::CloseHandle(stdinread);
+				stdinread = NULL;
+
+				stdinthread = ::CreateThread(NULL, 0, StdinSocketHandler, &startinfo, 0, NULL);
+
+				if (stdinthread == NULL)
+				{
+#ifdef SUBSYSTEM_WINDOWS
+					InitVerboseMode();
+#endif
+
+					_tprintf(_T("The 'stdin' socket handler thread failed to start.\n"));
+				}
+			}
+
+			if (Gx_stdoutsocket != INVALID_SOCKET && stdoutwrite != NULL)
+			{
+				::CloseHandle(stdoutwrite);
+				stdoutwrite = NULL;
+
+				stdoutthread = ::CreateThread(NULL, 0, StdoutSocketHandler, &startinfo, 0, NULL);
+
+				if (stdoutthread == NULL)
+				{
+#ifdef SUBSYSTEM_WINDOWS
+					InitVerboseMode();
+#endif
+
+					_tprintf(_T("The 'stdout' socket handler thread failed to start.\n"));
+				}
+			}
+
+			if (Gx_stderrsocket != INVALID_SOCKET && stderrwrite != NULL)
+			{
+				::CloseHandle(stderrwrite);
+				stderrwrite = NULL;
+
+				stderrthread = ::CreateThread(NULL, 0, StderrSocketHandler, &startinfo, 0, NULL);
+
+				if (stderrthread == NULL)
+				{
+#ifdef SUBSYSTEM_WINDOWS
+					InitVerboseMode();
+#endif
+
+					_tprintf(_T("The 'stderr' socket handler thread failed to start.\n"));
+				}
+			}
+
 			if (::WaitForSingleObject(procinfo.hProcess, waitamount) == WAIT_OBJECT_0)
 			{
 				if (!::GetExitCodeProcess(procinfo.hProcess, &exitcode))  exitcode = 0;
@@ -871,6 +1002,25 @@ int _tmain(int argc, TCHAR **argv)
 				::TerminateProcess(procinfo.hProcess, 1);
 				if (!::GetExitCodeProcess(procinfo.hProcess, &exitcode))  exitcode = 0;
 			}
+			else
+			{
+				// The child process is still running but this process should exit.  Get all threads to terminate.
+				if (Gx_stdinsocket != INVALID_SOCKET)  ::closesocket(Gx_stdinsocket);
+				if (Gx_stdoutsocket != INVALID_SOCKET)  ::closesocket(Gx_stdoutsocket);
+				if (Gx_stderrsocket != INVALID_SOCKET)  ::closesocket(Gx_stderrsocket);
+
+				Gx_stdinsocket = INVALID_SOCKET;
+				Gx_stdoutsocket = INVALID_SOCKET;
+				Gx_stderrsocket = INVALID_SOCKET;
+
+				if (Gx_stdinwritehandle != NULL)  ::CloseHandle(Gx_stdinwritehandle);
+				if (Gx_stdoutreadhandle != NULL)  ::CloseHandle(Gx_stdoutreadhandle);
+				if (Gx_stderrreadhandle != NULL)  ::CloseHandle(Gx_stderrreadhandle);
+
+				Gx_stdinwritehandle = NULL;
+				Gx_stdoutreadhandle = NULL;
+				Gx_stderrreadhandle = NULL;
+			}
 		}
 
 		::CloseHandle(procinfo.hProcess);
@@ -880,9 +1030,14 @@ int _tmain(int argc, TCHAR **argv)
 
 	if (GxNetworkStarted)
 	{
-		if (stdinsocket != INVALID_SOCKET)  ::closesocket(stdinsocket);
-		if (stdoutsocket != INVALID_SOCKET)  ::closesocket(stdoutsocket);
-		if (stderrsocket != INVALID_SOCKET)  ::closesocket(stderrsocket);
+		// Wait for the threads to finish.
+		if (stdinthread != NULL && ::WaitForSingleObject(stdinthread, 0) != WAIT_OBJECT_0)  ::TerminateThread(stdinthread, INFINITE);
+		if (stdoutthread != NULL)  ::WaitForSingleObject(stdoutthread, INFINITE);
+		if (stderrthread != NULL)  ::WaitForSingleObject(stderrthread, INFINITE);
+
+		if (Gx_stdinsocket != INVALID_SOCKET)  ::closesocket(Gx_stdinsocket);
+		if (Gx_stdoutsocket != INVALID_SOCKET)  ::closesocket(Gx_stdoutsocket);
+		if (Gx_stderrsocket != INVALID_SOCKET)  ::closesocket(Gx_stderrsocket);
 
 		::WSACleanup();
 	}

@@ -5,7 +5,7 @@ A complete, robust command-line utility to construct highly customized calls to 
 
 This project is intended primarily for use from batch files (.bat) to execute other programs.  If it can be done with CreateProcess(), it can be done with this command-line program.
 
-Why would you need this?  One use-case would be for programs that don't play nice even with the 'start' command.  For example, Apache 'httpd.exe' hangs the command-line even with 'start /B /MIN' but using this program with /f=DETACHED_PROCESS and Apache starts completely in the background.  I developed this primarily for Apache (way overkill for one feature), but I've had need for this program for other things on many different occasions.
+Why would you need this?  One use-case would be for programs that don't play nice even with the 'start' command.  For example, Apache 'httpd.exe' hangs the command-line even with 'start /B /MIN' but running this program with `/f=DETACHED_PROCESS` and Apache starts completely in the background.  I developed this primarily for Apache (way overkill for one feature), but I've had need for this program for other things on many different occasions.
 
 GitHub is a perfect fit for this sort of project.  The latest source and binaries reside here, so updating is a matter of running a 'git pull'.  You can also use it as a submodule in your own Git project.  If you know of any changes that need to be made, submit a pull request so that everyone benefits.
 
@@ -16,7 +16,7 @@ Features
 * Verbose mode tells you exactly how CreateProcess() will be called.  No more guessing!
 * Can redirect stdin, stdout, and stderr to TCP/IP sockets.  Avoid blocking on anonymous pipes or storing output in files!
 * Pre-built binaries using Visual Studio (statically linked C++ runtime, minimal file size of ~107K, direct Win32 API calls).
-* Windows subsystem variant.
+* Console and Windows subsystem variants.
 * Unicode support.
 * Offers almost everything CreateProcess() offers plus a couple of nice extras (e.g. output the process ID to a file).
 * Has a liberal open source license.  MIT or LGPL, your choice.
@@ -194,6 +194,13 @@ While `createprocess.exe` is intended for use with console apps, `createprocess-
 Why not just use `createprocess-win.exe`?  Since `createprocess-win.exe` starts as a Windows GUI application, there is the tendency for it to be run in the background and may not behave as expected with various handles.  The software is a little bit trickier to work with as a result.  It's also a few KB larger than `createprocess.exe`.
 
 There is one additional option specifically for `createprocess-win.exe` called `/attach` which attempts to attach to the console of the parent process (if any) and will also reset the standard handles.  The `/attach` option, if used, should generally be specified before other options.
+
+TCP/IP Notes
+------------
+
+The TCP/IP socket options represent a security risk so take proper precautions.  Example usage can be seen in the [ProcessHelper class](https://github.com/cubiclesoft/php-misc/blob/master/support/process_helper.php).
+
+In addition, passing SOCKET handles to the target process causes problems.  Sometimes the target process works just fine and sometimes it doesn't.  To deal with this issue, up to three threads are started, one for each of the standard handles.  Each thread routes data between its socket handle and an associated anonymous pipe of the started process.  As a consequence of using the TCP/IP socket option, the `/w` option is always set so that the started process is waited on (i.e. so the threads can transfer data).  This doesn't exactly matter as the `/w` option would be used anyway by the caller when passing socket options.
 
 Sources
 -------
