@@ -352,6 +352,12 @@ DWORD WINAPI StdinSocketHandler(LPVOID)
 
 	} while (1);
 
+	::closesocket(Gx_stdinsocket);
+	::CloseHandle(Gx_stdinwritehandle);
+
+	Gx_stdinsocket = INVALID_SOCKET;
+	Gx_stdinwritehandle = NULL;
+
 	return 0;
 }
 
@@ -369,6 +375,12 @@ DWORD WINAPI StdoutSocketHandler(LPVOID)
 
 	} while (1);
 
+	::closesocket(Gx_stdoutsocket);
+	::CloseHandle(Gx_stdoutreadhandle);
+
+	Gx_stdoutsocket = INVALID_SOCKET;
+	Gx_stdoutreadhandle = NULL;
+
 	return 0;
 }
 
@@ -385,6 +397,12 @@ DWORD WINAPI StderrSocketHandler(LPVOID)
 		if (bufferlen && ::send(Gx_stderrsocket, buffer, (int)bufferlen, 0) != bufferlen)  break;
 
 	} while (1);
+
+	::closesocket(Gx_stderrsocket);
+	::CloseHandle(Gx_stderrreadhandle);
+
+	Gx_stderrsocket = INVALID_SOCKET;
+	Gx_stderrreadhandle = NULL;
 
 	return 0;
 }
