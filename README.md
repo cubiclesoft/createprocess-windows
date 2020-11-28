@@ -7,7 +7,7 @@ This project is intended primarily for use from batch files (.bat) to execute ot
 
 Why would you need this?  One use-case would be for programs that don't play nice even with the 'start' command.  For example, Apache 'httpd.exe' hangs the command-line even with 'start /B /MIN' but running this program with `/f=DETACHED_PROCESS` and Apache starts completely in the background.  I developed this primarily for Apache (way overkill for one feature), but I've had need for this program for other things on many different occasions.
 
-GitHub is a perfect fit for this sort of project.  The latest source and binaries reside here, so updating is a matter of running a 'git pull'.  You can also use it as a submodule in your own Git project.  If you know of any changes that need to be made, submit a pull request so that everyone benefits.
+[![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/) [![Discord](https://img.shields.io/discord/777282089980526602?label=chat&logo=discord)](https://cubiclesoft.com/product-support/github/)
 
 Features
 --------
