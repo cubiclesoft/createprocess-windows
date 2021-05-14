@@ -9,7 +9,7 @@ Why would you need this?  One use-case would be for programs that don't play nic
 
 Learn about security tokens, advanced usage of the CreateProcess command-line tool, and much more:
 
-[![Windows Security Objects:  A Crash Course + A Brand New Way to Start Processes on Microsoft Windows video]((https://user-images.githubusercontent.com/1432111/118288197-0574ec00-b489-11eb-96e5-fab0f6149171.png)](https://www.youtube.com/watch?v=pmteqkbBfAY "Windows Security Objects:  A Crash Course + A Brand New Way to Start Processes on Microsoft Windows")
+[![Windows Security Objects:  A Crash Course + A Brand New Way to Start Processes on Microsoft Windows video](https://user-images.githubusercontent.com/1432111/118288197-0574ec00-b489-11eb-96e5-fab0f6149171.png)](https://www.youtube.com/watch?v=pmteqkbBfAY "Windows Security Objects:  A Crash Course + A Brand New Way to Start Processes on Microsoft Windows")
 
 [![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/) [![Discord](https://img.shields.io/discord/777282089980526602?label=chat&logo=discord)](https://cubiclesoft.com/product-support/github/)
 
