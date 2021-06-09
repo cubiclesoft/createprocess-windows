@@ -138,6 +138,24 @@ void DumpSyntax(TCHAR *currfile)
 \tMerges the current environment with another user environment.\n\
 \tUse with /elevatedtoken, /systemtoken, /usetoken, /createtoken.\n\
 \n\
+\t/mutex=MutexName\n\
+\tCreates a mutex with the specified name.\n\
+\tUse the named mutex with /singleton or other software\n\
+\tto detect an already running instance.\n\
+\n\
+\t/singleton[=Milliseconds]\n\
+\tOnly starts the target process if named /mutex is the only instance.\n\
+\tIf Milliseconds is specified, the number of milliseconds to wait.\n\
+\n\
+\t/semaphore=MaxCount,SemaphoreName\n\
+\tCreates a semaphore with the specified name and limit/count.\n\
+\tUse the named semaphore with /multiton\n\
+\tto limit the number of running processes.\n\
+\n\
+\t/multiton[=Milliseconds]\n\
+\tChecks or waits for a named /semaphore.\n\
+\tIf Milliseconds is specified, the number of milliseconds to wait.\n\
+\n\
 \t/f=PriorityClass\n\
 \tSets the priority class of the new process.\n\
 \tThere is only one priority class per process.\n\
@@ -2269,6 +2287,7 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 	LPTSTR tokenopts = NULL;
 	bool mergeenv = false;
 	HANDLE connectpipe = INVALID_HANDLE_VALUE;
+	HANDLE mutexhandle = NULL, semaphorehandle = NULL;
 	DWORD priorityflag = 0;
 #ifdef UNICODE
 	DWORD createflags = CREATE_UNICODE_ENVIRONMENT;
@@ -2631,6 +2650,109 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 			}
 
 			return GxService.MxExitCode;
+		}
+		else if (!_tcsncicmp(argv[x], _T("/mutex="), 7))
+		{
+			if (mutexhandle != NULL)  ::CloseHandle(mutexhandle);
+
+			mutexhandle = ::CreateMutex(NULL, FALSE, argv[x] + 7);
+			if (mutexhandle == NULL)
+			{
+				DumpErrorMsg("Unable to create mutex.", "create_mutex_failed", ::GetLastError());
+
+				return 1;
+			}
+		}
+		else if (!_tcsicmp(argv[x], _T("/singleton")))
+		{
+			if (mutexhandle == NULL)
+			{
+				DumpErrorMsg("The /mutex option was not used.", "mutex_check_failed", ::GetLastError());
+
+				return 1;
+			}
+
+			if (::WaitForSingleObject(mutexhandle, 0) != WAIT_OBJECT_0)
+			{
+				DumpErrorMsg("The mutex is in use.", "mutex_in_use", 0);
+
+				return 1;
+			}
+		}
+		else if (!_tcsncicmp(argv[x], _T("/singleton="), 11))
+		{
+			if (mutexhandle == NULL)
+			{
+				DumpErrorMsg("The /mutex option was not used.", "mutex_check_failed", ::GetLastError());
+
+				return 1;
+			}
+
+			DWORD temptimeout = (DWORD)_tstoi(argv[x] + 11);
+
+			if (::WaitForSingleObject(mutexhandle, temptimeout) != WAIT_OBJECT_0)
+			{
+				DumpErrorMsg("The mutex is in use.", "mutex_in_use", 0);
+
+				return 1;
+			}
+		}
+		else if (!_tcsncicmp(argv[x], _T("/semaphore="), 11))
+		{
+			if (semaphorehandle != NULL)  ::CloseHandle(semaphorehandle);
+
+			for (x2 = 7; argv[x][x2] && argv[x][x2] != _T(','); x2++);
+			if (!argv[x][x2])
+			{
+				DumpErrorMsg("Invalid /semaphore option.", "invalid_semaphore_option", 0);
+				DumpSyntax(argv[0]);
+
+				return 1;
+			}
+
+			LONG maxcount = (LONG)_tstoi(argv[x] + 11);
+
+			semaphorehandle = ::CreateSemaphoreW(NULL, maxcount, maxcount, argv[x] + x2 + 1);
+			if (semaphorehandle == NULL)
+			{
+				DumpErrorMsg("Unable to create semaphore.", "create_semaphore_failed", ::GetLastError());
+
+				return 1;
+			}
+		}
+		else if (!_tcsicmp(argv[x], _T("/multiton")))
+		{
+			if (semaphorehandle == NULL)
+			{
+				DumpErrorMsg("The /semaphore option was not used.", "semaphore_check_failed", ::GetLastError());
+
+				return 1;
+			}
+
+			if (::WaitForSingleObject(semaphorehandle, 0) != WAIT_OBJECT_0)
+			{
+				DumpErrorMsg("The semaphore is in use.", "semaphore_in_use", 0);
+
+				return 1;
+			}
+		}
+		else if (!_tcsncicmp(argv[x], _T("/multiton="), 10))
+		{
+			if (semaphorehandle == NULL)
+			{
+				DumpErrorMsg("The /semaphore option was not used.", "semaphore_check_failed", ::GetLastError());
+
+				return 1;
+			}
+
+			DWORD temptimeout = (DWORD)_tstoi(argv[x] + 11);
+
+			if (::WaitForSingleObject(semaphorehandle, temptimeout) != WAIT_OBJECT_0)
+			{
+				DumpErrorMsg("The semaphore is in use.", "semaphore_in_use", 0);
+
+				return 1;
+			}
 		}
 		else if (!_tcsicmp(argv[x], _T("/f=ABOVE_NORMAL_PRIORITY_CLASS")))  priorityflag = ABOVE_NORMAL_PRIORITY_CLASS;
 		else if (!_tcsicmp(argv[x], _T("/f=BELOW_NORMAL_PRIORITY_CLASS")))  priorityflag = BELOW_NORMAL_PRIORITY_CLASS;
@@ -3546,6 +3668,18 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 		if (tempprofile.hProfile != NULL)  ::UnloadUserProfile(maintoken, tempprofile.hProfile);
 
 		::CloseHandle(maintoken);
+	}
+
+	if (mutexhandle != NULL)
+	{
+		::ReleaseMutex(mutexhandle);
+		::CloseHandle(mutexhandle);
+	}
+
+	if (semaphorehandle != NULL)
+	{
+		::ReleaseSemaphore(semaphorehandle, 1, NULL);
+		::CloseHandle(semaphorehandle);
 	}
 
 	// Let the OS clean up after this program.  It is lazy, but whatever.

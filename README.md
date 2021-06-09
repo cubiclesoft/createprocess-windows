@@ -19,6 +19,7 @@ Features
 * Command-line action!
 * Verbose mode tells you exactly how CreateProcess() will be called.  No more guessing!
 * Can redirect stdin, stdout, and stderr to TCP/IP sockets.  Avoid blocking on anonymous pipes or storing output in files!
+* Can use named mutexes and semaphores to control how many processes can run at the same time.
 * Start elevated processes (UAC support).
 * Start child processes as any valid user without requiring the user's credentials.
 * Pre-built binaries using Visual Studio (statically linked C++ runtime, minimal file size of ~162K, direct Win32 API calls).
@@ -92,6 +93,24 @@ Options:
         /mergeenv
         Merges the current environment with another user environment.
         Use with /elevatedtoken, /systemtoken, /usetoken, /createtoken.
+
+        /mutex=MutexName
+        Creates a mutex with the specified name.
+        Use the named mutex with /singleton or other software
+        to detect an already running instance.
+
+        /singleton[=Milliseconds]
+        Only starts the target process if named /mutex is the only instance.
+        If Milliseconds is specified, the number of milliseconds to wait.
+
+        /semaphore=MaxCount,SemaphoreName
+        Creates a semaphore with the specified name and limit/count.
+        Use the named semaphore with /multiton
+        to limit the number of running processes.
+
+        /multiton[=Milliseconds]
+        Checks or waits for a named /semaphore.
+        If Milliseconds is specified, the number of milliseconds to wait.
 
         /f=PriorityClass
         Sets the priority class of the new process.
