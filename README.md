@@ -21,7 +21,7 @@ Features
 * Can redirect stdin, stdout, and stderr to TCP/IP sockets.  Avoid blocking on anonymous pipes or storing output in files!
 * Can use named mutexes and semaphores to control how many processes can run at the same time.
 * Start elevated processes (UAC support).
-* Start child processes as any valid user without requiring the user's credentials.
+* Start child processes as any valid user without requiring the user's credentials.  Including NT AUTHORITY\SYSTEM...aka the most powerful user account in Windows!
 * Pre-built binaries using Visual Studio (statically linked C++ runtime, minimal file size of ~162K, direct Win32 API calls).
 * Console and Windows subsystem variants.
 * Unicode support.
