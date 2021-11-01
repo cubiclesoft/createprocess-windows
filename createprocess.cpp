@@ -323,6 +323,17 @@ bool SetThreadProcessPrivilege(LPCWSTR PrivilegeName, bool Enable)
 DWORD GxConnectPipePID = 0;
 HANDLE GxMainCommPipeClient = INVALID_HANDLE_VALUE;
 
+// Creates an event object to be able to timeout on for the named pipe.
+HANDLE CreateCommPipeConnectEventObj(DWORD pid)
+{
+	CubicleSoft::StaticWCMixedVar<WCHAR[256]> TempVar;
+
+	TempVar.SetStr(L"Global\\CreateProcess_21F9597D-1A55-41AD-BCE0-0DB5CA53BDF8_CommEv_");
+	TempVar.AppendUInt(pid);
+
+	return ::CreateEventW(NULL, FALSE, FALSE, TempVar.GetStr());
+}
+
 // Attempt to connect to the named pipe.  Does not emit errors.
 bool ConnectToMainCommPipe()
 {
@@ -333,10 +344,7 @@ bool ConnectToMainCommPipe()
 	CubicleSoft::StaticWCMixedVar<WCHAR[256]> TempVar;
 	HANDLE tempevent;
 
-	TempVar.SetStr(L"Global\\CreateProcess_21F9597D-1A55-41AD-BCE0-0DB5CA53BDF8_CommEv_");
-	TempVar.AppendUInt(GxConnectPipePID);
-
-	tempevent = ::CreateEventW(NULL, FALSE, FALSE, TempVar.GetStr());
+	tempevent = CreateCommPipeConnectEventObj(GxConnectPipePID);
 	if (tempevent == NULL)  return false;
 
 	TempVar.SetStr(L"\\\\.\\pipe\\CreateProcess_21F9597D-1A55-41AD-BCE0-0DB5CA53BDF8_Comm_");
@@ -476,30 +484,14 @@ void DumpWideErrorMsg(const WCHAR *errorstr, const char *errorcode, DWORD winerr
 }
 
 // Waits for a client to connect and then validates the session the client is running in.
-bool WaitForValidCommPipeClient(HANDLE &pipehandle, DWORD timeout)
+bool WaitForValidCommPipeClient(HANDLE &pipehandle, HANDLE eventhandle, DWORD timeout)
 {
-	CubicleSoft::StaticWCMixedVar<WCHAR[256]> TempVar;
-	HANDLE tempevent;
-
-	TempVar.SetStr(L"Global\\CreateProcess_21F9597D-1A55-41AD-BCE0-0DB5CA53BDF8_CommEv_");
-	TempVar.AppendUInt(::GetCurrentProcessId());
-
-	tempevent = ::CreateEventW(NULL, FALSE, FALSE, TempVar.GetStr());
-	if (tempevent == NULL)
-	{
-		DumpErrorMsg("Unable to create pipe server event object.", "create_event_failed", ::GetLastError());
-
-		return false;
-	}
-
 	while (1)
 	{
 		// Wait for the event object to fire (allows for timeout).
-		if (::WaitForSingleObject(tempevent, timeout) != WAIT_OBJECT_0)
+		if (::WaitForSingleObject(eventhandle, timeout) != WAIT_OBJECT_0)
 		{
 			DumpErrorMsg("An elevated process did not respond before the timeout expired.", "timeout", ::GetLastError());
-
-			::CloseHandle(tempevent);
 
 			return false;
 		}
@@ -509,8 +501,6 @@ bool WaitForValidCommPipeClient(HANDLE &pipehandle, DWORD timeout)
 		{
 			DumpErrorMsg("Main communication pipe failed.", "connect_named_pipe_failed", ::GetLastError());
 
-			::CloseHandle(tempevent);
-
 			return false;
 		}
 
@@ -519,8 +509,6 @@ bool WaitForValidCommPipeClient(HANDLE &pipehandle, DWORD timeout)
 		DWORD currsessionid;
 		if (::GetNamedPipeClientSessionId(pipehandle, &clientsession) && ::ProcessIdToSessionId(::GetCurrentProcessId(), &currsessionid) && (clientsession == 0 || clientsession == currsessionid))
 		{
-			::CloseHandle(tempevent);
-
 			return true;
 		}
 
@@ -531,8 +519,6 @@ bool WaitForValidCommPipeClient(HANDLE &pipehandle, DWORD timeout)
 		if (pipehandle == INVALID_HANDLE_VALUE)
 		{
 			DumpErrorMsg("Unable to create the main communication pipe.", "start_main_comm_pipe_failed", ::GetLastError());
-
-			::CloseHandle(tempevent);
 
 			return false;
 		}
@@ -2361,6 +2347,14 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 				CubicleSoft::StaticWCMixedVar<WCHAR[8192]> TempVar;
 				HANDLE tempevent = INVALID_HANDLE_VALUE;
 
+				HANDLE commpipeevent = CreateCommPipeConnectEventObj(::GetCurrentProcessId());
+				if (commpipeevent == NULL)
+				{
+					DumpErrorMsg("Unable to create pipe server event object.", "create_event_failed", ::GetLastError());
+
+					return false;
+				}
+
 				if (wait)
 				{
 					TempVar.SetStr(L"Global\\CreateProcess_21F9597D-1A55-41AD-BCE0-0DB5CA53BDF8_CommEv2_");
@@ -2389,9 +2383,9 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 
 				// Wait for the client to connect.
 #ifdef _DEBUG
-				if (!WaitForValidCommPipeClient(commpipehandle, INFINITE))  return 1;
+				if (!WaitForValidCommPipeClient(commpipehandle, commpipeevent, INFINITE))  return 1;
 #else
-				if (!WaitForValidCommPipeClient(commpipehandle, 10000))  return 1;
+				if (!WaitForValidCommPipeClient(commpipehandle, commpipeevent, 10000))  return 1;
 #endif
 
 				// Process the status.
@@ -3347,6 +3341,14 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 				return 1;
 			}
 
+			HANDLE commpipeevent = CreateCommPipeConnectEventObj(::GetCurrentProcessId());
+			if (commpipeevent == NULL)
+			{
+				DumpErrorMsg("Unable to create pipe server event object.", "create_event_failed", ::GetLastError());
+
+				return 1;
+			}
+
 			// Elevate (if not already) and create the system service.
 			x2 = IsElevatedProcess();
 			if (x2 < 0)  return 1;
@@ -3362,9 +3364,9 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 
 			// Wait for the client to connect.
 #ifdef _DEBUG
-			if (!WaitForValidCommPipeClient(commpipehandle, INFINITE))  return 1;
+			if (!WaitForValidCommPipeClient(commpipehandle, commpipeevent, INFINITE))  return 1;
 #else
-			if (!WaitForValidCommPipeClient(commpipehandle, 35000))  return 1;
+			if (!WaitForValidCommPipeClient(commpipehandle, commpipeevent, 35000))  return 1;
 #endif
 
 			// Wait for the system service to initialize.
