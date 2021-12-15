@@ -2229,6 +2229,9 @@ DWORD WINAPI StdoutSocketHandler(LPVOID)
 
 	} while (1);
 
+	::shutdown(Gx_stdoutsocket, SD_SEND);
+	::recv(Gx_stdoutsocket, buffer, sizeof(buffer), 0);
+
 	::closesocket(Gx_stdoutsocket);
 	::CloseHandle(Gx_stdoutreadhandle);
 
@@ -2251,6 +2254,9 @@ DWORD WINAPI StderrSocketHandler(LPVOID)
 		if (bufferlen && ::send(Gx_stderrsocket, buffer, (int)bufferlen, 0) != bufferlen)  break;
 
 	} while (1);
+
+	::shutdown(Gx_stderrsocket, SD_SEND);
+	::recv(Gx_stderrsocket, buffer, sizeof(buffer), 0);
 
 	::closesocket(Gx_stderrsocket);
 	::CloseHandle(Gx_stderrreadhandle);
