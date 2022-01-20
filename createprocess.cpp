@@ -2268,7 +2268,7 @@ DWORD WINAPI StderrSocketHandler(LPVOID)
 }
 
 
-int _tmain(int argc, TCHAR **argv, TCHAR **envp)
+int MainInternal(int argc, TCHAR **argv, TCHAR **envp)
 {
 	bool verbose = false;
 	bool wait = false;
@@ -2545,7 +2545,7 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 			::WriteFile(GxMainCommPipeClient, "\x01", 1, NULL, NULL);
 
 			// Run this function again with the new information.
-			int retval = _tmain(argc2, argv2, envp2);
+			int retval = MainInternal(argc2, argv2, envp2);
 
 			// Trigger the notification event that this process is done.
 			if (!::SetEvent(tempevent))
@@ -3696,6 +3696,39 @@ int _tmain(int argc, TCHAR **argv, TCHAR **envp)
 	return (int)exitcode;
 }
 
+// Need to rebuild the environment variables.
+int _tmain(int argc, TCHAR **argv, TCHAR **envp)
+{
+	int envc2;
+	TCHAR **envp2;
+	int result;
+
+	LPWCH tempenv = ::GetEnvironmentStrings();
+	int x2;
+
+	// Convert to envp.
+	WCHAR *envpbuffer = (WCHAR *)tempenv;
+	for (x2 = 0; envpbuffer[x2]; x2++)
+	{
+		while (envpbuffer[x2])  x2++;
+	}
+
+	envpbuffer = (WCHAR *)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, (x2 + 1) * sizeof(WCHAR));
+	if (envpbuffer == NULL)  return 1;
+
+	memcpy(envpbuffer, tempenv, (x2 + 1) * sizeof(WCHAR));
+
+	::FreeEnvironmentStrings(tempenv);
+
+	if (!MakeStringArrayFromString(envpbuffer, x2 + 1, envp2, envc2))  return 1;
+
+	result = MainInternal(argc, argv, envp2);
+
+	FreeCommPipeStringArray(envpbuffer, envp2);
+
+	return result;
+}
+
 #ifdef SUBSYSTEM_WINDOWS
 #ifndef UNICODE
 // Swiped from:  https://stackoverflow.com/questions/291424/canonical-way-to-parse-the-command-line-into-arguments-in-plain-c-windows-api
@@ -3805,7 +3838,7 @@ int CALLBACK WinMain(HINSTANCE /* hInstance */, HINSTANCE /* hPrevInstance */, L
 
 	if (!MakeStringArrayFromString(envpbuffer, x2 + 1, envp, envc))  return 1;
 
-	result = _tmain(argc, argv, envp);
+	result = MainInternal(argc, argv, envp);
 
 	::LocalFree(argv);
 
