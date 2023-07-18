@@ -1,3 +1,5 @@
 # Ignore debugging and intermediate files.
 *.obj
 createprocess/*
+*.exe
+*.zip

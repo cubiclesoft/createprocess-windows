@@ -1,6 +1,8 @@
 CreateProcess() Windows API Command-Line Utility
 ================================================
 
+[![Build status](https://github.com/rgl/createprocess-windows/workflows/Build/badge.svg)](https://github.com/rgl/createprocess-windows/actions?query=workflow%3ABuild)
+
 A complete, robust command-line utility to construct highly customized calls to the CreateProcess() Windows API to start new processes.  Released under a MIT or LGPL license.
 
 This project is intended primarily for use from batch files (.bat) to execute other programs.  If it can be done with CreateProcess(), it can be done with this command-line program.
